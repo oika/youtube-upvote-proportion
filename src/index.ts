@@ -2,6 +2,9 @@ import $ from 'jquery';
 
 const UPVOTE_PREFIX = "高評価";
 
+const CLASS_NAME_ADD = "upvote-percent";
+
+// cache rates.
 const rateMap = new Map<string, number>();
 
 const refresh = () => {
@@ -9,6 +12,9 @@ const refresh = () => {
         (async () => {
             const elm = content.querySelector("a#thumbnail");
             if (elm == null) return;
+
+            // clear old info first. it may be incorrect.
+            clearRate(content);
 
             const url = elm.getAttribute("href") ?? "";
             if (!url.startsWith("/watch?v=")) return;
@@ -77,20 +83,31 @@ const fetchRate = async (url: string): Promise<number | undefined> => {
     }
 }
 
+const clearRate = (content: HTMLElement) => {
+    const line = findMetaLineElement(content);
+    if (line == null) return;
+    $(line).children("." + CLASS_NAME_ADD).each((_,e) => e.remove());
+}
+
 const insertRate = (rate: number, content: HTMLElement) => {
+
+    const line = findMetaLineElement(content);
+    if (line == null) return;
+    // it might already be added after clearRate.
+    if ($(line).children("." + CLASS_NAME_ADD).length > 0) return;
 
     const percent = Math.round(rate * 1000) / 10;
 
-    const metalines = $(content).find("div#details #meta ytd-video-meta-block #metadata-line");
-    if (metalines.length !== 1) return;
-
-    const line = metalines[0];
-    $(line).children(".upvote-percent").each((_,e) => e.remove());
-
     const span = document.createElement("span");
-    span.className = "upvote-percent";
+    span.className = CLASS_NAME_ADD;
     span.textContent = `👍${percent}%`;
 
     line.append(span);
+}
+
+const findMetaLineElement = (content: HTMLElement) => {
+    const metalines = $(content).find("div#details #meta ytd-video-meta-block #metadata-line");
+    if (metalines.length !== 1) return undefined;
+    return metalines[0];
 }
 

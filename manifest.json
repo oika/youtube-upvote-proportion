@@ -1,6 +1,6 @@
 {
     "name": "Youtube Upvote Proportion",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "manifest_version": 3,
     "description": "Display the percentage of high ratings to the number of views.",
     "content_scripts": [{
