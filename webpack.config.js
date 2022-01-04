@@ -7,6 +7,7 @@ module.exports = {
 
     entry : {
         index : path.resolve(__dirname, 'src/index.ts'),
+        background: path.resolve(__dirname, 'src/background.ts')
     },
 
     module : {
@@ -19,5 +20,10 @@ module.exports = {
     output : {
         filename : '[name].js',
         path : path.join(__dirname, 'js')
+    },
+
+    resolve: {
+        extensions: ['.ts'],
+        modules: [path.resolve(__dirname, 'src'), 'node_modules']
     }
 }

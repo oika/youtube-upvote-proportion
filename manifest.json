@@ -8,5 +8,8 @@
         "js": [
             "js/index.js"
         ]
-    }]
+    }],
+    "background": {
+        "service_worker": "js/background.js"
+    }
 }

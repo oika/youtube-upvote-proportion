@@ -1,11 +1,9 @@
 import $ from 'jquery';
+import { GetRateMessageRequest, GetRateMessageResponse, SaveRateMessageRequest } from './messages';
 
 const UPVOTE_PREFIX = "高評価";
 
 const CLASS_NAME_ADD = "upvote-percent";
-
-// cache rates.
-const rateMap = new Map<string, number>();
 
 const refresh = () => {
     $("div#content").each((_,content) => {
@@ -19,11 +17,11 @@ const refresh = () => {
             const url = elm.getAttribute("href") ?? "";
             if (!url.startsWith("/watch?v=")) return;
     
-            let rate = rateMap.get(url);
+            let rate = await getRateFromStore(url);
             if (rate == null) {
                 rate = await fetchRate(url);
                 if (rate != null) {
-                    rateMap.set(url, rate);
+                    saveRateToStore(url, rate);
                 }
             }
             if (rate != null) {
@@ -31,6 +29,17 @@ const refresh = () => {
             }
         })();
     });
+}
+
+const getRateFromStore = async (url: string): Promise<number | undefined> => {
+    const msg: GetRateMessageRequest = { type: "getRate", url };
+    return new Promise(resolve => {
+        chrome.runtime.sendMessage(msg, (res:GetRateMessageResponse) => resolve(res.rate));
+    })
+}
+const saveRateToStore = (url: string, rate: number) => {
+    const msg: SaveRateMessageRequest = { type:"saveRate", url, rate };
+    chrome.runtime.sendMessage(msg);
 }
 
 const observer = new MutationObserver(refresh);
