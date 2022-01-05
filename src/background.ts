@@ -1,3 +1,5 @@
 import { RateStore } from "./RateStore";
 
-const store = new RateStore();
+const stores = [
+    new RateStore(),
+];

@@ -4,7 +4,7 @@
     "manifest_version": 3,
     "description": "Display the percentage of high ratings to the number of views.",
     "content_scripts": [{
-        "matches": ["https://www.youtube.com/"],
+        "matches": ["https://www.youtube.com/*"],
         "js": [
             "js/index.js"
         ]
