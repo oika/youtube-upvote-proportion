@@ -10,34 +10,19 @@ if (pg == null) {
     console.warn("failed to start observer");
 } else {
     //watch initial elements
-    pg.querySelectorAll(RichItemWatcher.ELEMENT_NAME).forEach(elm => {
-        richItem.watch(elm);
-    })
-    pg.querySelectorAll(FeedVideoWatcher.ELEMENT_NAME).forEach(elm => {
-        feedVideo.watch(elm);
-    });
+    richItem.watch([...pg.querySelectorAll(RichItemWatcher.ELEMENT_NAME).values()]);
+    feedVideo.watch([...pg.querySelectorAll(FeedVideoWatcher.ELEMENT_NAME).values()]);
 
     //observe appended
     pageObserver = new MutationObserver(records => {
-        for (const rec of records) {
-            for (const node of rec.addedNodes.values()) {
-                if (!(node instanceof Element)) continue;
 
-                if (node.localName === RichItemWatcher.ELEMENT_NAME) {
-                    richItem.watch(node);
-                    continue;
-                }
-                if (node.localName === FeedVideoWatcher.ELEMENT_NAME) {
-                    feedVideo.watch(node);
-                    continue;
-                }
-                if (node.localName === "ytd-compact-video-renderer") {
-                    //TODO
-                    console.log("related: ビデオ追加");
-                    continue;
-                }
-            }
-        }
+        const added = records.flatMap(r => [...r.addedNodes.values()])
+                        .filter((n):n is Element => n instanceof Element);
+        const richItems = added.filter(n => n.localName === RichItemWatcher.ELEMENT_NAME);
+        const feedVideos = added.filter(n => n.localName === FeedVideoWatcher.ELEMENT_NAME);
+        const compacts = added.filter(n => n.localName === "ytd-compact-video-renderer");
+        richItem.watch(richItems);
+        feedVideo.watch(feedVideos);
 
     });
     pageObserver.observe(pg, { subtree:true, childList:true });
