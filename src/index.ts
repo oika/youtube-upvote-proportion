@@ -1,113 +1,33 @@
-import $ from 'jquery';
+import { CompactVideoWatcher } from './watchers/CompactVideowatcher';
+import { FeedVideoWatcher } from './watchers/FeedVideoWatcher';
+import { RichItemWatcher } from './watchers/RichItemWatcher';
 
-const UPVOTE_PREFIX = "高評価";
+const richItem = new RichItemWatcher();
+const feedVideo = new FeedVideoWatcher();
+const compactVideo = new CompactVideoWatcher();
 
-const CLASS_NAME_ADD = "upvote-percent";
+let pageObserver: MutationObserver;
+const pg = document.querySelector("ytd-app #page-manager");
+if (pg == null) {
+    console.warn("failed to start observer");
+} else {
+    //watch initial elements
+    richItem.watch([...pg.querySelectorAll(RichItemWatcher.ELEMENT_NAME).values()]);
+    feedVideo.watch([...pg.querySelectorAll(FeedVideoWatcher.ELEMENT_NAME).values()]);
+    compactVideo.watch([...pg.querySelectorAll(CompactVideoWatcher.ELEMENT_NAME).values()]);
 
-// cache rates.
-const rateMap = new Map<string, number>();
+    //observe appended
+    pageObserver = new MutationObserver(records => {
 
-const refresh = () => {
-    $("div#content").each((_,content) => {
-        (async () => {
-            const elm = content.querySelector("a#thumbnail");
-            if (elm == null) return;
+        const added = records.flatMap(r => [...r.addedNodes.values()])
+                        .filter((n):n is Element => n instanceof Element);
+        const richItems = added.filter(n => n.localName === RichItemWatcher.ELEMENT_NAME);
+        const feedVideos = added.filter(n => n.localName === FeedVideoWatcher.ELEMENT_NAME);
+        const compacts = added.filter(n => n.localName === CompactVideoWatcher.ELEMENT_NAME);
+        richItem.watch(richItems);
+        feedVideo.watch(feedVideos);
+        compactVideo.watch(compacts);
 
-            // clear old info first. it may be incorrect.
-            clearRate(content);
-
-            const url = elm.getAttribute("href") ?? "";
-            if (!url.startsWith("/watch?v=")) return;
-    
-            let rate = rateMap.get(url);
-            if (rate == null) {
-                rate = await fetchRate(url);
-                if (rate != null) {
-                    rateMap.set(url, rate);
-                }
-            }
-            if (rate != null) {
-                insertRate(rate, content);
-            }
-        })();
     });
+    pageObserver.observe(pg, { subtree:true, childList:true });
 }
-
-const observer = new MutationObserver(refresh);
-
-$(() => {
-    const container = document.querySelector("#contents");
-    if (container != null) {
-        observer.observe(container, { childList:true });
-
-        //initial load
-        refresh();
-    }
-})
-
-
-const fetchRate = async (url: string): Promise<number | undefined> => {
-    try {
-        const res = await fetch(url);
-        const text = await res.text();
-        const dom = new DOMParser().parseFromString(text, "text/html");
-
-        const initData = [...dom.querySelectorAll("script").values()]
-                .find(scr => scr.textContent?.startsWith("var ytInitialData ="))
-                ?.textContent;
-        if (initData == null) return undefined;
-        const json = JSON.parse(initData.substring("var ytInitialData = ".length, initData.length -1));
-
-        const contents = (json.contents?.twoColumnWatchNextResults?.results?.results?.contents ?? []) as any[];
-        const info = contents.find(c => c.videoPrimaryInfoRenderer != null)?.videoPrimaryInfoRenderer;
-        if (info == null) return undefined;
-        
-        const countText = info.viewCount?.videoViewCountRenderer?.viewCount?.simpleText;
-        if (countText == null) return undefined;
-        const count = parseInt(countText.replace(/,/g, ""));
-        if (count === 0 || isNaN(count)) return undefined;
-
-        const voteButtons = (info.videoActions?.menuRenderer?.topLevelButtons ?? []) as any[];
-        const upvoteTxt = voteButtons.map(b => b.toggleButtonRenderer?.defaultText?.accessibility?.accessibilityData?.label ?? "")
-                                .find(l => typeof(l) === "string" && l.startsWith(UPVOTE_PREFIX));
-        if (upvoteTxt == null) return undefined;
-        const upvote = parseInt(upvoteTxt.substring(UPVOTE_PREFIX.length).trimStart().replace(/,/g, ""));
-        if (isNaN(upvote)) return undefined;
-
-        if (upvote === 0) return 0;
-
-        return upvote / count;
-
-    } catch(err) {
-        return undefined;
-    }
-}
-
-const clearRate = (content: HTMLElement) => {
-    const line = findMetaLineElement(content);
-    if (line == null) return;
-    $(line).children("." + CLASS_NAME_ADD).each((_,e) => e.remove());
-}
-
-const insertRate = (rate: number, content: HTMLElement) => {
-
-    const line = findMetaLineElement(content);
-    if (line == null) return;
-    // it might already be added after clearRate.
-    if ($(line).children("." + CLASS_NAME_ADD).length > 0) return;
-
-    const percent = Math.round(rate * 1000) / 10;
-
-    const span = document.createElement("span");
-    span.className = CLASS_NAME_ADD;
-    span.textContent = `👍${percent}%`;
-
-    line.append(span);
-}
-
-const findMetaLineElement = (content: HTMLElement) => {
-    const metalines = $(content).find("div#details #meta ytd-video-meta-block #metadata-line");
-    if (metalines.length !== 1) return undefined;
-    return metalines[0];
-}
-
