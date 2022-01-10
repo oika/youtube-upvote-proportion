@@ -29,10 +29,12 @@ export class RateStore {
         
         if (info == null) {
             res = { type: "getRate", rate: undefined };
+            console.debug(`get rate: ${msg.url} none`);
         } else {
             const now = dayjs();
             const expired = dayjs(info.fetchedAt).diff(now, "minute") >= EXPIRES_MINUTES;
             res = { type: "getRate", rate: expired ? undefined : info.rate };
+            console.debug(`get rate: ${msg.url} ${expired ? "expired" : info.rate}`);
         }
 
         sendResponse(res);
@@ -40,5 +42,6 @@ export class RateStore {
 
     private onSaveRate = (msg: SaveRateMessageRequest) => {
         this.rateMap.set(msg.url, { rate: msg.rate, fetchedAt: dayjs().toDate() });
+        console.debug(`save rate: ${msg.url} ${msg.rate}`);
     }
 }
