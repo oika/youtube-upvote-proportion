@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Upvote Proportion Settings</title>
+    <script src="js/options.js"></script>
+    <link rel="stylesheet" type="text/css" href="options.css">
+
+</head>
+<body>
+    <div class="option-row">
+        <label for="input_api_key">YouTube API Key</label>
+        <div class="option-value">
+            <input id="input_api_key" type="text">
+            <div class="option-value-description">
+                <p>It's highly recommended to set your YouTube Data API Key in order to reduce the amount of transfer required to get the status of videos.</p>
+                <p>See <a target="_blank" href="https://developers.google.com/youtube/v3/getting-started">developers.google.com</a>.</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="option-footer">
+        <span class="option-footer-spacer"></span>
+        <button class="option-save" id="btn_save">Save</button>
+        <div id="save_status" class="option-status"></div>
+    </div>
+</body>
+</html>

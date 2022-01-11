@@ -1,6 +1,54 @@
+import { getChromeStorageString } from "./store-access";
+
 const UPVOTE_PREFIX = "高評価";
 
-export const fetchRate = async (url: string): Promise<number | undefined> => {
+export const fetchRate = async (url:string): Promise<number | undefined> => {
+    const apiKey = await getChromeStorageString("yt-api-key");
+    if (apiKey == null || apiKey.trim() === "") {
+        return fetchRateByHtml(url);
+    }
+
+    return fetchRateUsingApi(url, apiKey);
+}
+
+const fetchRateUsingApi = async (url:string, apiKey: string): Promise<number | undefined> => {
+    const id = parseIdFromUrl(url);
+    if (id == null) return undefined;
+
+    const endpoint = `https://www.googleapis.com/youtube/v3/videos?id=${id}&key=${apiKey}&part=statistics&fields=items(statistics)`;
+
+    try {
+        const res = await fetch(endpoint);
+        const text = await res.text();
+        if (text === "") return undefined;
+        const json = JSON.parse(text);
+
+        const items = json.items as any[];
+        if (items == null || items.length !== 1) return undefined;
+        const view = Number(items[0].statistics?.viewCount ?? 0);
+        const like = Number(items[0].statistics?.likeCount ?? 0);
+        if (isNaN(view) || view === 0) return undefined;
+        if (isNaN(like)) return undefined;
+        if (like === 0) return 0;
+
+        return like / view;
+
+    } catch(err) {
+        return undefined;
+    }
+
+}
+
+const parseIdFromUrl = (url:string) => {
+    const stIdx = url.indexOf("v=");
+    if (stIdx < 0) return undefined;
+
+    const edIdx = url.indexOf("&", stIdx + 2);
+    return url.substring(stIdx + 2, edIdx < 0 ? undefined : edIdx);
+}
+
+
+const fetchRateByHtml = async (url: string): Promise<number | undefined> => {
     try {
         const res = await fetch(url);
         const text = await res.text();
