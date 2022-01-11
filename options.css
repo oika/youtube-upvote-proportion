@@ -1,0 +1,40 @@
+.option-row {
+    display: flex;
+}
+.option-row > label {
+    font-weight: bold;
+    margin-top: 2px;
+}
+
+.option-value {
+    flex: 1;
+    padding: 0 6px;
+}
+.option-value input {
+    width: 100%;
+}
+
+.option-value-description > p {
+    margin: 4px 0;
+    color: #999;
+}
+
+.option-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 20px;
+    padding: 6px 0;
+}
+.option-status {
+    margin-left: 6px;
+    color: rgb(1, 129, 1);
+}
+.option-status,
+.option-footer-spacer {
+    flex:1;
+}
+.option-save {
+    padding: 4px 20px;
+    cursor: pointer;
+}
