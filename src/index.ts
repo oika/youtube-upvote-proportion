@@ -1,10 +1,17 @@
+import { selectLanguage } from './languages';
 import { CompactVideoWatcher } from './watchers/CompactVideowatcher';
 import { FeedVideoWatcher } from './watchers/FeedVideoWatcher';
 import { RichItemWatcher } from './watchers/RichItemWatcher';
 
-const richItem = new RichItemWatcher();
-const feedVideo = new FeedVideoWatcher();
-const compactVideo = new CompactVideoWatcher();
+const langVal = document.querySelector("html")?.getAttribute("lang");
+let lang = selectLanguage(langVal);
+if (lang == null) {
+    console.error("Unsupported Language " + langVal);
+}
+
+const richItem = new RichItemWatcher(lang);
+const feedVideo = new FeedVideoWatcher(lang);
+const compactVideo = new CompactVideoWatcher(lang);
 
 let pageObserver: MutationObserver;
 const pg = document.querySelector("ytd-app #page-manager");

@@ -1,4 +1,5 @@
 import $ from 'jquery';
+import { Language } from '../languages';
 import { fetchRate } from '../RateLoader';
 import { convertRateToPercent, getRateFromStore, saveRateToStore } from '../store-access';
 
@@ -11,7 +12,7 @@ export abstract class WatcherBase {
 
     readonly observer: MutationObserver;
 
-    constructor() {
+    constructor(private readonly lang: Language|undefined) {
         this.observer = new MutationObserver(this.onObserved);
     }
 
@@ -62,7 +63,7 @@ export abstract class WatcherBase {
             }
 
             this.logDebug("fetch rate " + target.url);
-            const rate = await fetchRate(target.url);
+            const rate = await fetchRate(target.url, this.lang);
             if (rate == null) {
                 this.logDebug("can't refresh " + target.url);
                 continue;
