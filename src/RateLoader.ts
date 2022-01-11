@@ -1,11 +1,14 @@
+import { Language } from "./languages";
 import { getChromeStorageString } from "./store-access";
 
-const UPVOTE_PREFIX = "高評価";
-
-export const fetchRate = async (url:string): Promise<number | undefined> => {
+export const fetchRate = async (url:string, lang:Language|undefined): Promise<number | undefined> => {
     const apiKey = await getChromeStorageString("yt-api-key");
     if (apiKey == null || apiKey.trim() === "") {
-        return fetchRateByHtml(url);
+
+        if (lang != null) {
+            return fetchRateByHtml(url, lang);
+        }
+        return undefined;
     }
 
     return fetchRateUsingApi(url, apiKey);
@@ -48,7 +51,7 @@ const parseIdFromUrl = (url:string) => {
 }
 
 
-const fetchRateByHtml = async (url: string): Promise<number | undefined> => {
+const fetchRateByHtml = async (url: string, lang: Language): Promise<number | undefined> => {
     try {
         const res = await fetch(url);
         const text = await res.text();
@@ -66,15 +69,19 @@ const fetchRateByHtml = async (url: string): Promise<number | undefined> => {
         
         const countText = info.viewCount?.videoViewCountRenderer?.viewCount?.simpleText;
         if (countText == null) return undefined;
-        const count = parseInt(countText.replace(/,/g, ""));
-        if (count === 0 || isNaN(count)) return undefined;
 
-        const voteButtons = (info.videoActions?.menuRenderer?.topLevelButtons ?? []) as any[];
-        const upvoteTxt = voteButtons.map(b => b.toggleButtonRenderer?.defaultText?.accessibility?.accessibilityData?.label ?? "")
-                                .find(l => typeof(l) === "string" && l.startsWith(UPVOTE_PREFIX));
-        if (upvoteTxt == null) return undefined;
-        const upvote = parseInt(upvoteTxt.substring(UPVOTE_PREFIX.length).trimStart().replace(/,/g, ""));
-        if (isNaN(upvote)) return undefined;
+        const menuButtons = (info.videoActions?.menuRenderer?.topLevelButtons ?? []) as any[];
+        const upvoteButton = menuButtons.map(b => b.toggleButtonRenderer)
+                                .find(r => r?.defaultIcon?.iconType === "LIKE");
+        if (upvoteButton == null) return undefined;
+
+        const upvoteTxt = upvoteButton.defaultText?.accessibility?.accessibilityData?.label;
+        if (upvoteTxt == null || (typeof upvoteTxt) !== "string") return undefined;
+
+        const upvote = parseUpvoteCount(upvoteTxt, lang);
+        const count = parseViewCount(countText, lang);
+        if (upvote == null) return undefined;
+        if (count == null) return undefined;
 
         if (upvote === 0) return 0;
 
@@ -83,4 +90,56 @@ const fetchRateByHtml = async (url: string): Promise<number | undefined> => {
     } catch(err) {
         return undefined;
     }
+}
+
+
+const parseViewCount = (text: string, lang: Language): number | undefined => {
+    let res: number;
+    switch (lang) {
+        case "Japanese":    // X,XXX 回視聴
+        case "English":     // X,XXX views
+        case "Chinese":     // X,XXX次观看
+            res = parseInt(text.replace(/,/g, ""));
+            break;
+        case "Taiwan":      // 觀看次數：X,XXX次
+            res = parseInt(text.substring("觀看次數：".length).trimStart().replace(/,/g, ""));
+            break;
+        case "HongKong":    // 收看次數：X,XXX 次
+            res = parseInt(text.substring("收看次數：".length).trimStart().replace(/,/g, ""));
+            break;
+        case "Italian":     // X.XXX visualizzazioni
+        case "German":      // X.XXX Aufrufe
+            res = parseInt(text.replace(/\./g, ""));
+            break;
+        default:
+            console.debug("cannot parse view count of lang " + lang);
+            return undefined;
+    }
+
+    if (res === 0 || isNaN(res)) return undefined;
+    return res;
+}
+const parseUpvoteCount = (text: string, lang: Language): number | undefined => {
+    let res: number;
+    switch (lang) {
+        case "Japanese":    // 高評価 X,XXX 回
+            res = parseInt(text.substring("高評価".length).trimStart().replace(/,/g, ""));
+            break;
+        case "English":     // X,XXX likes
+        case "Chinese":     // X,XXX 人顶过
+        case "Taiwan":      // X,XXX 人喜歡
+        case "HongKong":    // X,XXX 人表示喜歡
+            res = parseInt(text.replace(/,/g, ""));
+            break;
+        case "Italian":     // X.XXX Mi piace
+        case "German":      // X.XXX "Mag ich"-Bewertungen
+            res = parseInt(text.replace(/\./g, ""));
+            break;
+        default:
+            console.debug("cannot parse upvote count of lang " + lang);
+            return undefined;
+    }
+
+    if (isNaN(res)) return undefined;
+    return res;
 }
